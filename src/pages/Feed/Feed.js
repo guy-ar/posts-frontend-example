@@ -60,7 +60,13 @@ class Feed extends Component {
       .then(resData => {
         console.log(resData)
         this.setState({
-          posts: resData.posts,
+          // to support use case of edit that keep the same path if no change
+          posts: resData.posts.map(post => {
+            return {
+              ...post,
+              imagePath: post.imageUrl
+            };
+          }),
           totalPosts: resData.totalItems,
           postsLoading: false
         });
@@ -107,6 +113,10 @@ class Feed extends Component {
       editLoading: true
     });
     // Set up data (with image!)
+    const formData = new FormData()
+    formData.append('title', postData.title)
+    formData.append('content', postData.content)
+    formData.append('image', postData.image)
     let url = 'http://localhost:8080/feed/post';
     if (this.state.editPost) {
       url = 'URL';
@@ -118,14 +128,7 @@ class Feed extends Component {
 
     fetch(url, {
       method: method,
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        title: postData.title,
-        content: postData.content
-      })
-
+      body: formData
     })
       .then(res => {
         console.log(res);
