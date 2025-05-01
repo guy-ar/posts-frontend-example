@@ -119,7 +119,7 @@ class Feed extends Component {
     formData.append('image', postData.image)
     let url = 'http://localhost:8080/feed/post';
     if (this.state.editPost) {
-      url = 'URL';
+      url = 'http://localhost:8080/feed/post/' + this.state.editPost._id;
     }
     let method = 'POST'
     if (this.state.editPost) {
