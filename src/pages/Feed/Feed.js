@@ -132,32 +132,50 @@ class Feed extends Component {
     // Set up data (with image!)
     const formData = new FormData()
     formData.append('title', postData.title)
-    formData.append('content', postData.content)
+    formData.append('content', postData.title)
     formData.append('image', postData.image)
-    let url = 'http://localhost:8080/feed/post';
-    if (this.state.editPost) {
-      url = 'http://localhost:8080/feed/post/' + this.state.editPost._id;
-    }
-    let method = 'POST'
-    if (this.state.editPost) {
-      method = 'PUT';
-    }
-
-    fetch(url, {
-      method: method,
-      body: formData,
+    const graphqlQuery = {
+      query: `
+        mutation {
+          createPost(postInput: {
+            title: "${postData.title}"
+            content: "${postData.title}"
+            imageUrl: "some image url"
+          }) {
+            _id
+            title
+            content
+            creator {
+              name
+            }
+            createdAt
+          }
+        }
+      `
+    };
+    fetch('http://localhost:8080/graphql', {
+      method: 'POST',
+      body: JSON.stringify(graphqlQuery),
       headers: {
+        'Content-Type': 'application/json',
         Authorization: 'Bearer ' + this.props.token
       }
     })
       .then(res => {
-        console.log(res);
-        if (res.status !== 200 && res.status !== 201) {
-          throw new Error('Creating or editing a post failed!');
-        }
         return res.json();
       })
       .then(resData => {
+       if (resData.errors && resData.errors[0].status === 401) {
+          throw new Error('Validation failed. User is missing');
+        }
+        if (resData.errors && resData.errors[0].status === 422) {
+          throw new Error("Post creation failed with validataion error!");
+        }
+        if (resData.errors) {
+          throw new Error("post creation failed!");
+        } 
+        console.log(resData);
+      
         const post = {
           _id: resData.post._id,
           title: resData.post.title,
