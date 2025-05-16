@@ -57,7 +57,7 @@ class Feed extends Component {
     const graphqlQuery = {
       query: `
         query {
-          posts {
+          posts (page: ${page}) {
             posts {
               _id
               title
@@ -98,7 +98,7 @@ class Feed extends Component {
               imagePath: post.imageUrl
             };
           }),
-          totalPosts: resData.data.posts.totalItems,
+          totalPosts: resData.data.posts.totalPosts,
           postsLoading: false
         });
       })
@@ -155,14 +155,14 @@ class Feed extends Component {
     // Set up data (with image!)
     const formData = new FormData()
     formData.append('title', postData.title)
-    formData.append('content', postData.title)
+    formData.append('content', postData.content)
     formData.append('image', postData.image)
     const graphqlQuery = {
       query: `
         mutation {
           createPost(postInput: {
             title: "${postData.title}"
-            content: "${postData.title}"
+            content: "${postData.content}"
             imageUrl: "some image url"
           }) {
             _id
@@ -214,6 +214,7 @@ class Feed extends Component {
             );
             updatedPosts[postIndex] = post;
           } else {
+            updatedPosts.pop();
             updatedPosts.unshift(post);
           }
           return {
