@@ -168,29 +168,55 @@ class Feed extends Component {
     }).then(res => {
       return res.json()
     }).then(resData => {
-      const imageUrl = resData.filePath;
-      const normalizedImageUrl = imageUrl.replace(/\\/g, '/');
+      let normalizedImageUrl
+      if (resData.filePath) {
+        normalizedImageUrl = resData.filePath.replace(/\\/g, '/');
+      }
 
-      const graphqlQuery = {
-        query: `
-          mutation {
-            createPost(postInput: {
-              title: "${postData.title}",
-              content: "${postData.content}",
-              imageUrl: "${normalizedImageUrl}"
-            }) {
-              _id
-              title
-              content
-              imageUrl
-              creator {
-                name
+      let graphqlQuery
+      if (this.state.editPost) {
+        graphqlQuery = {
+          query: `
+            mutation {
+              updatePost(postId: "${this.state.editPost._id}", postInput: {
+                title: "${postData.title}",
+                content: "${postData.content}",
+                imageUrl: "${normalizedImageUrl}"
+              }) {
+                _id
+                title
+                content
+                imageUrl
+                creator {
+                  name
+                }
+                createdAt
               }
-              createdAt
             }
-          }
-        `
-      };
+          `
+        }
+      } else {
+        graphqlQuery = {
+          query: `
+            mutation {
+              createPost(postInput: {
+                title: "${postData.title}",
+                content: "${postData.content}",
+                imageUrl: "${normalizedImageUrl}"
+              }) {
+                _id
+                title
+                content
+                imageUrl
+                creator {
+                  name
+                }
+                createdAt
+              }
+            }
+          `
+        }
+      }
       return fetch('http://localhost:8080/graphql', {
         method: 'POST',
         body: JSON.stringify(graphqlQuery),
@@ -204,25 +230,50 @@ class Feed extends Component {
         return res.json();
       })
       .then(resData => {
-       if (resData.errors && resData.errors[0].status === 401) {
+        let errorMessage = null;
+        if (resData.errors && resData.errors[0].status === 401) {
           throw new Error('Validation failed. User is missing');
         }
+        
         if (resData.errors && resData.errors[0].status === 422) {
-          throw new Error("Post creation failed with validataion error!");
+          
+          if (this.state.editPost) {
+            errorMessage = "Post Update failed with validataion error!"
+          } else {
+            errorMessage = "Post creation failed with validataion error!"
+          }
+          throw new Error(errorMessage);
         }
         if (resData.errors) {
-          throw new Error("post creation failed!");
-        } 
+          if (this.state.editPost) {
+            errorMessage = "Post Update failed!"
+          } else {
+            errorMessage = "Post creation failed!"
+          }
+          throw new Error(errorMessage);
+        }
         console.log(resData);
       
-        const post = {
+        let post
+        if (this.state.editPost) {
+          post = {
+            _id: resData.data.updatePost._id,
+            title: resData.data.updatePost.title,
+            content: resData.data.updatePost.content,
+            creator: resData.data.updatePost.creator,
+            createdAt: resData.data.updatePost.createdAt,
+            imagePath: resData.data.updatePost.imageUrl
+          };
+        } else {
+          post = {
           _id: resData.data.createPost._id,
           title: resData.data.createPost.title,
           content: resData.data.createPost.content,
           creator: resData.data.createPost.creator,
           createdAt: resData.data.createPost.createdAt,
           imagePath: resData.data.createPost.imageUrl
-        };
+          };
+        }
         this.setState(prevState => {
           let updatedPosts = [...prevState.posts];
           if (prevState.editPost) {
