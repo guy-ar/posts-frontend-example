@@ -152,39 +152,54 @@ class Feed extends Component {
     this.setState({
       editLoading: true
     });
-    // Set up data (with image!)
+    // Set up data (only image! - rest will use the graphql api)
     const formData = new FormData()
-    formData.append('title', postData.title)
-    formData.append('content', postData.content)
     formData.append('image', postData.image)
-    const graphqlQuery = {
-      query: `
-        mutation {
-          createPost(postInput: {
-            title: "${postData.title}"
-            content: "${postData.content}"
-            imageUrl: "some image url"
-          }) {
-            _id
-            title
-            content
-            creator {
-              name
-            }
-            createdAt
-          }
-        }
-      `
-    };
-    fetch('http://localhost:8080/graphql', {
-      method: 'POST',
-      body: JSON.stringify(graphqlQuery),
+    if (this.state.editPost) {
+      // in case of edit mode - we need to send the old path in order 
+      formData.append('oldPath', this.state.editPost.imagePath)
+    }
+    fetch('http://localhost:8080/post-image', {
+      body: formData,
+      method: 'PUT',
       headers: {
-        'Content-Type': 'application/json',
         Authorization: 'Bearer ' + this.props.token
       }
-    })
-      .then(res => {
+    }).then(res => {
+      return res.json()
+    }).then(resData => {
+      const imageUrl = resData.filePath;
+
+      const graphqlQuery = {
+        query: `
+          mutation {
+            createPost(postInput: {
+              title: "${postData.title}"
+              content: "${postData.content}"
+              imageUrl: "${imageUrl}"
+            }) {
+              _id
+              title
+              content
+              imageUrl
+              creator {
+                name
+              }
+              createdAt
+            }
+          }
+        `
+      };
+      return fetch('http://localhost:8080/graphql', {
+        method: 'POST',
+        body: JSON.stringify(graphqlQuery),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + this.props.token
+        }
+      })
+      
+    }).then(res => {
         return res.json();
       })
       .then(resData => {
@@ -204,7 +219,8 @@ class Feed extends Component {
           title: resData.data.createPost.title,
           content: resData.data.createPost.content,
           creator: resData.data.createPost.creator,
-          createdAt: resData.data.createPost.createdAt
+          createdAt: resData.data.createPost.createdAt,
+          imagePath: resData.data.createPost.imageUrl
         };
         this.setState(prevState => {
           let updatedPosts = [...prevState.posts];
