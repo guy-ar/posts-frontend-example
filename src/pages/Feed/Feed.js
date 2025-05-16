@@ -56,8 +56,8 @@ class Feed extends Component {
     }
     const graphqlQuery = {
       query: `
-        query {
-          posts (page: ${page}) {
+        {
+          posts(page: ${page}) {
             posts {
               _id
               title
@@ -72,7 +72,7 @@ class Feed extends Component {
           }
         }
       `
-    }
+    };
     //fetch('http://localhost:8080/feed/posts?page=' + page, {
       fetch('http://localhost:8080/graphql', {
         method: 'POST',
@@ -169,14 +169,15 @@ class Feed extends Component {
       return res.json()
     }).then(resData => {
       const imageUrl = resData.filePath;
+      const normalizedImageUrl = imageUrl.replace(/\\/g, '/');
 
       const graphqlQuery = {
         query: `
           mutation {
             createPost(postInput: {
-              title: "${postData.title}"
-              content: "${postData.content}"
-              imageUrl: "${imageUrl}"
+              title: "${postData.title}",
+              content: "${postData.content}",
+              imageUrl: "${normalizedImageUrl}"
             }) {
               _id
               title
